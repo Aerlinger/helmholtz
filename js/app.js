@@ -38,7 +38,7 @@ $(function(){
     var vectorField = new VectorField(vf);
 
     var initialEnergy = 0;
-    var integrationTypes = ['FORWARD_EULER', 'SYMPLECTIC_EULER'];
+    var integrationTypes = ['FORWARD_EULER', 'SYMPLECTIC_EULER', 'VERLET'];
 
     vectorField.draw();
 
@@ -104,7 +104,7 @@ $(function(){
         //defaults
         this.index = options.index || 0;
         this.r = options.r || 20;
-        this.m = options.m || this.r;
+        this.m = options.m || this.r/8;
         this.p = options.p || new Vector2(0, 0);
         this.v = options.v || new Vector2(0, 0);
         this.a = options.a || new Vector2(0, 0);
@@ -128,29 +128,35 @@ $(function(){
         //update called on each loop iteration. delta is difference in time from previous iteration
         this.update = function(delta){
 
+            //TODO: refactor this into a dropdown for the user to choose integration type
+            var integrationType = 'SYMPLECTIC_EULER';
+
             var dt = delta * 60/1000;
 
             var force_vf = vectorField.eval(this.p.x,this.p.y);
-
-            //Forward Euler
-            //this.v.addFrom(force_vf.mult(dt)).addFrom(force_friction.mult(dt));
-            //var dp = this.v.mult(dt);
-            //this.p.addFrom(dp);
-
-            // Symplectic Euler:
-            this.a = force_vf.div(this.m);
             var force_friction = this.v.mult(-drag);
 
-            this.v = this.v.add(this.a.mult(dt)).add(force_friction.mult(dt));
-            this.p = this.p.add(this.v.mult(dt));
+            switch (integrationType){
 
-            //VERLET
-//            this.v = this.p.sub(this.pOld);
-//            force_friction = this.v.mult(-drag)
-//            var dp = this.p.sub(this.pOld).add((force_vf.add(force_friction)).mult(dt*dt));
-//            this.pOld = new Vector2(this.p.x, this.p.y);
-//            this.p.addFrom(dp)
+                case 'FORWARD_EULER':
+                    this.a = force_vf.add(force_friction).div(this.m);
+                    this.p = this.p.add(this.v.mult(dt));
+                    this.v = this.v.add(this.a.mult(dt));
+                    break;
+                case 'SYMPLECTIC_EULER':
+                    this.a = force_vf.add(force_friction).div(this.m);
+                    this.v = this.v.add(this.a.mult(dt));
+                    this.p = this.p.add(this.v.mult(dt));
+                    break;
+                case 'VERLET':
+                    this.v = this.p.sub(this.pOld);
+                    force_friction = this.v.mult(-drag);
+                    var dp = this.p.sub(this.pOld).add((force_vf.add(force_friction)).mult(dt*dt));
+                    this.pOld = new Vector2(this.p.x, this.p.y);
+                    this.p.addFrom(dp);
+                    break;
 
+            }
 
             var collisionParams = this.collision();
             if (collisionParams.type)
@@ -254,6 +260,7 @@ $(function(){
 
             var radius = this.r;
             var typeArray = params.type.split(' ');
+            var residue;
 
             for (var index in typeArray){
 
@@ -285,36 +292,36 @@ $(function(){
 
                     case 'floor':
                         // overshoot distance:
-                        var residue = this.p.y + 2*radius - worldHeight;
+                        residue = this.p.y + 2*radius - worldHeight;
                         // Give a more natural 'bounce'
                         this.p.y -= Math.floor(2*residue);
 
-                        this.v.reflect(n_wallBottom, restitution)
+                        this.v.reflect(n_wallBottom, restitution);
                         this.v.x *= friction;
                         //this.v.y *= -1;
                         break;
 
                     case 'ceiling':
-                        var residue = (worldTop - this.p.y);
+                        residue = (worldTop - this.p.y);
                         this.p.y += Math.floor(2*residue);
 
-                        this.v.reflect(n_wallTop, restitution)
+                        this.v.reflect(n_wallTop, restitution);
                         this.v.x *= friction;
                         break;
 
                     case 'left':
-                        var residue = (worldLeft - this.p.x);
+                        residue = (worldLeft - this.p.x);
                         this.p.x += Math.floor(2*residue);
 
-                        this.v.reflect(n_wallLeft, restitution)
+                        this.v.reflect(n_wallLeft, restitution);
                         this.v.y *= friction;
                         break;
 
                     case 'right':
-                        var residue = (this.p.x + 2*radius - worldWidth);
+                        residue = (this.p.x + 2*radius - worldWidth);
                         this.p.x -= Math.floor(2*residue);
 
-                        this.v.reflect(n_wallRight, restitution)
+                        this.v.reflect(n_wallRight, restitution);
                         this.v.y *= friction;
                         break;
 
@@ -428,7 +435,7 @@ $(function(){
 
         // Percent Error only works for conservative vector fields (Potential energy not calculated yet):
         if (frames % 30 == 0) {
-            kineticEnergyError = (initialEnergy - worldKineticEnergy) / (initialEnergy);
+            var kineticEnergyError = (initialEnergy - worldKineticEnergy) / (initialEnergy);
             console.log("Total K.E.: %1.1f \tChange in K.E. from t=0: %.01f", worldKineticEnergy, kineticEnergyError);
         }
 
@@ -449,9 +456,9 @@ $(function(){
     }
 
     function totalKineticEnergy() {
-        totalEnergy = 0;
+        var totalEnergy = 0;
         for (var index in particles){
-            particle = particles[index];
+            var particle = particles[index];
             totalEnergy += .5 * particle.m * particle.v.dot(particle.v);
         }
 
