@@ -10,7 +10,7 @@ function VectorField(vf){
         }
 
         var randIndex = Math.floor(length*Math.random());
-        console.log(randIndex)
+        console.log(randIndex);
         key = keys[randIndex];
         vf = vectorFields[key];
     }
@@ -44,12 +44,12 @@ function VectorField(vf){
 
 }
 
-VectorField.prototype.eval = function(x,y){
+VectorField.prototype.eval = function (x, y) {
 
-    var pt = this.xy2uv(x,y);
-    return new Vector2(this.p(pt.u,pt.v), -this.q(pt.u,pt.v));
+    var pt = this.xy2uv(x, y);
+    return new Vector2(this.p(pt.u, pt.v), -this.q(pt.u, pt.v));
 
-}
+};
 
 VectorField.prototype.drawQuiver = function(x,y){
 
@@ -64,7 +64,7 @@ VectorField.prototype.drawQuiver = function(x,y){
     ctx.stroke();
     ctx.fill();
 
-}
+};
 
 VectorField.prototype.draw = function(){
 
@@ -108,4 +108,4 @@ VectorField.prototype.draw = function(){
         }
     }
 
-}
+};
