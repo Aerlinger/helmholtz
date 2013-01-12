@@ -36,6 +36,10 @@ $(function(){
 
     var vf          = vectorFields[vf_key];
     var vectorField = new VectorField(vf);
+
+    var initialEnergy = 0;
+
+    var integrationTypes = ['FORWARD_EULER', 'SYMPLECTIC_EULER']
     vectorField.draw();
 
     //------------------------------------------HTML event listeners
@@ -127,12 +131,21 @@ $(function(){
             var dt = delta * 60/1000;
 
             var force_vf = vectorField.eval(this.p.x,this.p.y);
-            var force_friction = this.v.mult(-drag)
+            // Update acceleration:
+            this.a = force_vf.div(this.m);
+            var force_friction = this.v.mult(-drag);
 
             //Forward Euler
-            this.v.addFrom(force_vf.mult(dt)).addFrom(force_friction.mult(dt));
-            var dp = this.v.mult(dt);
-            this.p.addFrom(dp);
+            //this.v.addFrom(force_vf.mult(dt)).addFrom(force_friction.mult(dt));
+            //var dp = this.v.mult(dt);
+            //this.p.addFrom(dp);
+
+
+            // Symplectic Euler
+            //this.pOld = this.p;
+
+            this.v = this.v.add(this.a.mult(dt)).add(force_friction.mult(dt));
+            this.p = this.p.add(this.v.mult(dt));
 
             //VERLET
 //            this.v = this.p.sub(this.pOld);
@@ -274,33 +287,38 @@ $(function(){
                         break;
 
                     case 'floor':
+                        // overshoot distance:
+                        var residue = (this.p.y + 2*radius - worldHeight);
 
-                        this.p.y = worldHeight - 2*this.r - 1;
-                        this.v.reflect(n_wallBottom,restitution)
+                        this.p.y -= Math.floor(2*residue);//worldHeight - 2*this.r - 1;
+                        this.v.reflect(n_wallBottom, restitution)
                         this.v.x *= friction;
                         //this.v.y *= -1;
                         break;
 
                     case 'ceiling':
+                        var residue = (worldTop - this.p.y);
+                        this.p.y += 2*residue;
 
-                        this.p.y = worldTop + 1;
-                        this.v.reflect(n_wallTop,restitution)
+                        this.v.reflect(n_wallTop, restitution)
                         this.v.x *= friction;
                         //this.v.y *= -1;
                         break;
 
                     case 'left':
+                        var residue = (worldLeft - this.p.x);
+                        this.p.x += 2*residue;
 
-                        this.p.x = worldLeft + 1;
-                        this.v.reflect(n_wallLeft,restitution)
+                        this.v.reflect(n_wallLeft, restitution)
                         this.v.y *= friction;
                         //this.v.x *= -1;
                         break;
 
                     case 'right':
+                        var residue = (this.p.x + 2*radius - worldWidth);
+                        this.p.x -= 2*residue -1;
 
-                        this.p.x = worldWidth - 2*radius - 1;
-                        this.v.reflect(n_wallRight,restitution)
+                        this.v.reflect(n_wallRight, restitution)
                         this.v.y *= friction;
                         //this.v.x *= -1;
                         break;
@@ -379,10 +397,13 @@ $(function(){
     //frame count
     var frames = 60;
     var fps_timeout;
+    var totalFrames = 0;
+    var initialEnergy = 0;
+
     function fps(){
 
         fps_timeout = setTimeout(fps,1000);
-        $fps.html(frames)
+        $fps.html(frames);
         frames = 0;
 
     };
@@ -402,8 +423,18 @@ $(function(){
         for (var index in particles)
             particles[index].update(delta);
 
+        worldKineticEnergy = totalKineticEnergy();
+
+        if (totalFrames == 0)
+            initialEnergy = worldKineticEnergy
+
         then = now;
         frames++;
+        totalFrames++;
+
+        // % Error only works for conservative vector fields (Potential energy not calculated yet):
+        if(frames % 30 == 0)
+            console.log("Total Kinetic Energy: %1.1f   Change in K.E. from initial Cond.: %.01f", worldKineticEnergy, (initialEnergy - worldKineticEnergy) / (initialEnergy));
 
     };
 
@@ -420,6 +451,16 @@ $(function(){
         loop();
 
     };
+
+    function totalKineticEnergy() {
+        totalEnergy = 0;
+        for (var index in particles){
+            particle = particles[index];
+            totalEnergy += .5 * particle.m * particle.v.dot(particle.v);
+        }
+
+        return totalEnergy;
+    }
 
     //run simulation
     createParticles();
