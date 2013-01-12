@@ -11,6 +11,15 @@ vectorFields = {
         }
     },
 
+    radialGravity : {
+        p : function(x,y){
+            return -x / Math.sqrt(x*x + y*y);
+        },
+        q : function(x,y){
+            return -y / Math.sqrt(x*x + y*y);
+        }
+    },
+
     spring : {
         p : function(x,y){
             return .7 - x;
