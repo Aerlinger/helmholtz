@@ -40,6 +40,8 @@ $(function(){
     var initialEnergy = 0;
     var integrationTypes = ['FORWARD_EULER', 'SYMPLECTIC_EULER', 'VERLET'];
 
+    var output = false;
+
     vectorField.draw();
 
     //------------------------------------------HTML event listeners
@@ -109,8 +111,6 @@ $(function(){
         this.v = options.v || new Vector2(0, 0);
         this.a = options.a || new Vector2(0, 0);
         this.pOld = this.p;
-
-        console.log(this.pOld.x);
 
         this.$el = $('<div>')
             .addClass('circle')
@@ -424,20 +424,22 @@ $(function(){
         for (var index in particles)
             particles[index].update(delta);
 
-        var worldKineticEnergy = totalKineticEnergy();
+        if (output){
+            var worldKineticEnergy = totalKineticEnergy();
 
-        if (totalFrames == 0)
-            initialEnergy = worldKineticEnergy;
+            if (totalFrames == 0)
+                initialEnergy = worldKineticEnergy;
+
+            // Percent Error only works for conservative vector fields (Potential energy not calculated yet):
+            if (frames % 30 == 0) {
+                var kineticEnergyError = (initialEnergy - worldKineticEnergy) / (initialEnergy);
+                console.log("Total K.E.: %1.1f \tChange in K.E. from t=0: %.01f", worldKineticEnergy, kineticEnergyError);
+            }
+            totalFrames++;
+        }
 
         then = now;
         frames++;
-        totalFrames++;
-
-        // Percent Error only works for conservative vector fields (Potential energy not calculated yet):
-        if (frames % 30 == 0) {
-            var kineticEnergyError = (initialEnergy - worldKineticEnergy) / (initialEnergy);
-            console.log("Total K.E.: %1.1f \tChange in K.E. from t=0: %.01f", worldKineticEnergy, kineticEnergyError);
-        }
 
     }
 

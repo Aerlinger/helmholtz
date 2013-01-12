@@ -20,15 +20,6 @@ vectorFields = {
         }
     },
 
-    spring : {
-        p : function(x,y){
-            return .7 - x;
-        },
-        q : function(x,y){
-            return -y;
-        }
-    },
-
     vortex : {
         p : function(x,y){
             return y;
@@ -44,6 +35,15 @@ vectorFields = {
         },
         q : function(x,y){
             return Math.cos(2*pi*x);
+        }
+    },
+
+    pointAttractor : {
+        p : function(x,y){
+            return .7 - x;
+        },
+        q : function(x,y){
+            return -y;
         }
     },
 
@@ -117,7 +117,9 @@ vectorFields = {
     }
 };
 
+
+//populate vector field dropdown selection
 for (var key in vectorFields){
     var selection = $('<option>').attr('value',key).html(key);
-    $('#vf_select').append(selection)
+    $('#vf_select').append(selection);
 }
