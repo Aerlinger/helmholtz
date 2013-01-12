@@ -432,9 +432,11 @@ $(function(){
         frames++;
         totalFrames++;
 
-        // % Error only works for conservative vector fields (Potential energy not calculated yet):
-        if(frames % 30 == 0)
-            console.log("Total Kinetic Energy: %1.1f   Change in K.E. from initial Cond.: %.01f", worldKineticEnergy, (initialEnergy - worldKineticEnergy) / (initialEnergy));
+        // Percent Error only works for conservative vector fields (Potential energy not calculated yet):
+        if (frames % 30 == 0) {
+            kineticEnergyError = (initialEnergy - worldKineticEnergy) / (initialEnergy);
+            console.log("Total K.E.: %1.1f \tChange in K.E. from t=0: %.01f", worldKineticEnergy, kineticEnergyError);
+        }
 
     };
 
