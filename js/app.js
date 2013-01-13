@@ -27,22 +27,30 @@
 
 $(function(){
 
-    var N           = parseInt($('#input_number').val());
-    var restitution = 1 - parseFloat($('#input_restitution').val());
-    var friction    = .95;
+    var N           = $('#input_number').val();
     var collisions  = $('#collisions').is(':checked');
     var vf_key      = $('#vf_select').val();
     var drag        = $('#input_drag').val();
+
+    var restitution = 1;
+    var friction    = 1;
 
     var vf          = vectorFields[vf_key];
     var vectorField = new VectorField(vf);
 
     var initialEnergy = 0;
-    var integrationTypes = ['FORWARD_EULER', 'SYMPLECTIC_EULER', 'VERLET'];
-
     var output = false;
 
     vectorField.draw();
+
+    //populate vector field dropdown selection
+    var integrationTypes = ['symplectic euler', 'forward euler', 'verlet'];
+    var integrationType = integrationTypes[1];
+    for (var key in integrationTypes){
+        var selection = $('<option>').attr('value',integrationTypes[key]).html(integrationTypes[key]);
+        $('#integrator_select').append(selection);
+    }
+
 
     //------------------------------------------HTML event listeners
 
@@ -63,11 +71,10 @@ $(function(){
         $('#value_drag').html(drag);
     });
 
-    $('#input_restitution').on('change',function(){
-        restitution = 1.0 - parseFloat($(this).val());
-        var outputVal = 1 - restitution;
-        $('#value_restitution').html(outputVal.toFixed(1));
+    $('#input_integrator').on('change',function(){
+        integrationType = $(this).val();
     });
+
 
     $('#input_number').on('change',function(){
         var number = parseInt($(this).val());
@@ -129,7 +136,6 @@ $(function(){
         this.update = function(delta){
 
             //TODO: refactor this into a dropdown for the user to choose integration type
-            var integrationType = 'SYMPLECTIC_EULER';
 
             var dt = delta * 60/1000;
 
@@ -138,17 +144,22 @@ $(function(){
 
             switch (integrationType){
 
-                case 'FORWARD_EULER':
+                case 'forward euler':
+
                     this.a = force_vf.add(force_friction).div(this.m);
                     this.p = this.p.add(this.v.mult(dt));
                     this.v = this.v.add(this.a.mult(dt));
                     break;
-                case 'SYMPLECTIC_EULER':
+
+                case 'symplectic euler':
+
                     this.a = force_vf.add(force_friction).div(this.m);
                     this.v = this.v.add(this.a.mult(dt));
                     this.p = this.p.add(this.v.mult(dt));
                     break;
-                case 'VERLET':
+
+                case 'verlet':
+
                     this.v = this.p.sub(this.pOld);
                     force_friction = this.v.mult(-drag);
                     var dp = this.p.sub(this.pOld).add((force_vf.add(force_friction)).mult(dt*dt));
@@ -157,13 +168,6 @@ $(function(){
                     break;
 
             }
-
-            var collisionParams = this.collision();
-            if (collisionParams.type)
-                this.collisionUpdate(collisionParams);
-
-
-            this.draw();
 
         };
 
@@ -361,6 +365,32 @@ $(function(){
 
     }
 
+    function draw(){
+
+        //create N particles with randomized attributes
+        for (var i = 0; i < N; i++){
+            particles[i].draw();
+        }
+
+    }
+
+    function collisionResolution(){
+
+        var numCollisions = 0;
+
+        for (var i = 0; i < N; i++){
+            var particle = particles[i]
+            var collisionParams = particle.collision();
+            if (collisionParams.type){
+                numCollisions++;
+                particle.collisionUpdate(collisionParams);
+            }
+        }
+
+        return numCollisions;
+
+    }
+
 //    detect device rotation
 //    if (window.DeviceOrientationEvent) {
 //        window.addEventListener('deviceorientation', function(eventData) {
@@ -423,6 +453,13 @@ $(function(){
 
         for (var index in particles)
             particles[index].update(delta);
+
+        var numCollisions = collisionResolution();
+        if (numCollisions/N > .5){
+            collisionResolution();
+        }
+
+        draw();
 
         if (output){
             var worldKineticEnergy = totalKineticEnergy();
